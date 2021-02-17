@@ -53,7 +53,7 @@ bool interrupt_switch_pressed(void)
 		1. Write an if-else statement with a condition which checks whether the Interrupt Switch is pressed or not.
 		2. If the Interrupt Switch is pressed return true, else return false
 	*/
-	if( interrupt_sw_pin_reg & (1 << interrupt_sw_pin) )
+	if( (interrupt_sw_pin_reg & (1 << interrupt_sw_pin)) == 0x00)
 		return true;
 	else
 		return false;
