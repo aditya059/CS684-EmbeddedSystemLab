@@ -21,10 +21,10 @@ void wl_sensors_port_config(void)
 	// << NOTE >> : Use Masking and Shift Operators here
 
 	// Make **ONLY** three white line sensor pins as input
-	wl_sensors_ddr_reg	= ;
+	wl_sensors_ddr_reg	&= ~((1 << left_wl_sensor_pin) | (1 << center_wl_sensor_pin) | (1 << right_wl_sensor_pin));
 
 	// Deactivate pull-up for **ONLY** for three white line sensor pins
-	wl_sensors_port_reg	= ;
+	wl_sensors_port_reg	&= ~((1 << left_wl_sensor_pin) | (1 << center_wl_sensor_pin) | (1 << right_wl_sensor_pin));
 }
 
 
@@ -36,10 +36,10 @@ void ir_prox_sensors_port_config(void)
 	// << NOTE >> : Use Masking and Shift Operators here
 
 	// Make **ONLY** 5th IR proximity sensor pin as input
-	ir_prox_5_sensor_ddr_reg = ;
+	ir_prox_5_sensor_ddr_reg &= ~(1 << ir_prox_5_sensor_pin);
 
 	// Deactivate pull-up for **ONLY** 5th IR proximity sensor pin
-	ir_prox_5_sensor_port_reg = ;
+	ir_prox_5_sensor_port_reg &= ~(1 << ir_prox_5_sensor_pin);
 }
 
 
@@ -52,21 +52,21 @@ void adc_init(void)
 
 	// In ADCSRA, enable ADC and pre-scalar = 64 (ADEN = 1, ADPS2 = 1, ADPS1 = 1, ADPS0 = 0)
 	//				and clear ADC start conversion bit, auto trigger enable bit, interrupt flag bit and interrupt enable bit
-	ADCSRA_reg	= ;
-	ADCSRA_reg	= ;
+	ADCSRA_reg	|=  (1 << ADEN_bit) | (1 << ADPS2_bit) | (1 << ADPS1_bit);
+	ADCSRA_reg	&= ~((1 << ADPS0_bit) | (1 << ADSC_bit) | (1 << ADATE_bit) | (1 << ADIF_bit) | (1 << ADIE_bit));
 
 	// In ADCSRB, disable Analog Comparator Multiplexer, MUX5 bit and ADC Auto Trigger Source bits
-	ADCSRB_reg	= ;
+	ADCSRB_reg	&= ~((1 << ACME_bit) | (1 << MUX5_bit) |(1 << ADTS2_bit) | (1 << ADTS1_bit) | (1 << ADTS0_bit));
 
 	// In ADMUX, set the Reference Selection bits to use the AVCC as reference, and disable the channel selection bits MUX[4:0]
-	ADMUX_reg	= ;
-	ADMUX_reg	= ;
+	ADMUX_reg	|= (1 << REFS0_bit) ;
+	ADMUX_reg	&= ~((1 << REFS1_bit) | (1 << MUX4_bit) | (1 << MUX3_bit) | (1 << MUX2_bit) | (1 << MUX1_bit) | (1 << MUX0_bit));
 
 	// In ADMUX, enable the ADLAR bit for 8-bit ADC result
-	ADMUX_reg	= ;
+	ADMUX_reg	|= (1 << ADLAR_bit);
 
 	// In ACSR, disable the Analog Comparator by writing 1 to ACD_bit
-	ACSR_reg = ;
+	ACSR_reg |= (1 << ACD_bit);
 }
 
 
@@ -127,15 +127,15 @@ void select_adc_channel( unsigned char channel_num )
 	// << NOTE >> : Use Masking and Shift Operators here
 
 	// set the MUX[5:0] bits to select the ADC channel number
-	if ( )
+	if ( channel_num > 7)
 	{
-		ADCSRB_reg = ;					// set the MUX5 bit for selecting channel if its greater than 7
+		ADCSRB_reg |= (1 << MUX5_bit);					// set the MUX5 bit for selecting channel if its greater than 7
 	}
 
-	channel_num	= ;						// retain the last 3 bits from the variable for MUX[2:0] bits
+	channel_num	&= 0x07;						// retain the last 3 bits from the variable for MUX[2:0] bits
 
 	//ADMUX_reg	= ( ( ADMUX_reg & 0xF8 ) | channel_num );
-	ADMUX_reg	= ;
+	ADMUX_reg	= ((ADMUX_reg & 0xF8) | channel_num);
 }
 
 
@@ -147,7 +147,7 @@ void start_adc(void)
 	// << NOTE >> : Use Masking and Shift Operators here
 
 	// set the ADSC bit in ADCSRA register
-	ADCSRA_reg	= ;
+	ADCSRA_reg	|= (1 << ADSC_bit);
 }
 
 
@@ -165,7 +165,10 @@ bool check_adc_conversion_complete(void)
 		1. Write an if-else statement with a condition which checks whether the ADC conversion for the selected channel is complete or not.
 		2. If the ADC has completed its conversion for the selected channel return true, else return false
 	*/
-
+	if((ADCSRA_reg & (1 << ADIF_bit)) != 0x00)
+		return true;
+	else
+		return false;
 }
 
 
@@ -184,9 +187,9 @@ unsigned char read_adc_converted_data(void)
 
 	unsigned char adc_data_high_byte;
 
-	adc_data_high_byte	= ;
+	adc_data_high_byte	= ADCH_reg;
 
-	adc_8bit_data		= ;
+	adc_8bit_data	= adc_data_high_byte;
 
 	return adc_8bit_data;
 }
@@ -199,12 +202,12 @@ void reset_adc_config_registers(void)
 {
 	// << NOTE >> : Use Masking and Shift Operators here
 
-	ADCSRA_reg	= ;					// clear ADIF bit by writing 1 to it
+	ADCSRA_reg	|= (1 << ADIF_bit);					// clear ADIF bit by writing 1 to it
 
-	ADCSRB_reg	= ;					// clear the MUX5 bit
+	ADCSRB_reg	&= ~(1 << MUX5_bit) ;					// clear the MUX5 bit
 
 	// clear the MUX[4:0] bits
-	ADMUX_reg = ;
+	ADMUX_reg &= ~((1 << MUX4_bit) | (1 << MUX3_bit) | (1 << MUX2_bit) | (1 << MUX1_bit) | (1 << MUX0_bit));
 }
 
 
